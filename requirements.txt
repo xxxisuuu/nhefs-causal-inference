@@ -1,5 +1,8 @@
-numpy>=1.24
-pandas>=2.0
-statsmodels>=0.14
-plotly>=5.18
-kaleido
+# versions the published results were produced with (python 3.13)
+numpy==2.5.3
+pandas==3.0.5
+statsmodels==0.15.0
+plotly==7.1.0
+# kaleido >= 1.0 no longer bundles a browser: it needs Chrome/Chromium installed.
+# if PNG export fails run `plotly_get_chrome` once, or set BROWSER_PATH
+kaleido==1.5.0
