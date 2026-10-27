@@ -82,9 +82,14 @@ def fig_love(d):
             "education_4": "Edu: college dropout", "education_5": "Edu: college+",
             "exercise_0": "Exercise: much", "exercise_1": "Exercise: moderate", "exercise_2": "Exercise: little/none",
             "active_0": "Active: very", "active_1": "Active: moderate", "active_2": "Active: inactive"}
+    # matched sample (with replacement -> a control can appear more than once)
+    _, mi = models.psmatch(d)
+    Xm = pd.concat([X.loc[mi["treated"]], X.loc[mi["controls"]]])
+    tm = np.r_[np.ones(len(mi["treated"])), np.zeros(len(mi["controls"]))]
     rows = []
     for c in X.columns:
-        rows.append(dict(var=nice.get(c, c), raw=models.smd(X[c], d.qsmk), wtd=models.smd(X[c], d.qsmk, w)))
+        rows.append(dict(var=nice.get(c, c), raw=models.smd(X[c], d.qsmk), wtd=models.smd(X[c], d.qsmk, w),
+                         mtc=models.smd(Xm[c], tm)))
     s = pd.DataFrame(rows)
     s["absraw"] = s.raw.abs()
     s = s.sort_values("absraw")
@@ -98,14 +103,18 @@ def fig_love(d):
                     hovertemplate="%{y}<br>SMD %{x:.3f}<extra>unweighted</extra>")
     fig.add_scatter(x=s.wtd, y=s["var"], mode="markers", name="IP weighted",
                     marker=dict(size=11, color="#2a9d8f"), hovertemplate="%{y}<br>SMD %{x:.3f}<extra>weighted</extra>")
+    fig.add_scatter(x=s.mtc, y=s["var"], mode="markers", name="PS matched (ATT)",
+                    marker=dict(size=10, symbol="diamond", color=C_ACC, line=dict(color="#222", width=1)),
+                    hovertemplate="%{y}<br>SMD %{x:.3f}<extra>matched</extra>")
     fig.add_vline(x=0, line_color="#444", line_width=1)
     fig.add_annotation(x=0.1, y=1.02, yref="paper", text="|SMD| < 0.1", showarrow=False,
                        font=dict(size=11, color="#2a9d8f"), xanchor="left")
     fig.update_xaxes(title="Standardized mean difference (quit - smoke)", gridcolor="#eee", zeroline=False)
     fig.update_yaxes(gridcolor="#f0f0f0")
-    fig.update_layout(legend=dict(orientation="h", y=1.08, x=0.55))
-    base_layout(fig, "Covariate balance before and after weighting",
-                f"Max |SMD| drops from {s.raw.abs().max():.2f} to {s.wtd.abs().max():.2f}")
+    fig.update_layout(legend=dict(orientation="h", y=1.08, x=0.35))
+    base_layout(fig, "Covariate balance before and after weighting / matching",
+                f"Max |SMD|: {s.raw.abs().max():.2f} unweighted, {s.wtd.abs().max():.2f} IP weighted, "
+                f"{s.mtc.abs().max():.2f} matched")
     save(fig, "fig2_love_plot", 950, 700)
     return s
 
@@ -188,6 +197,9 @@ if __name__ == "__main__":
 
     point = {k: f(d) for k, f in models.ESTIMATORS.items()}
     print(pd.Series(point).round(2))
+    _, mi = models.psmatch(d)
+    print(f"PS matching: {mi['n_unmatched']} of {mi['n_treated']} quitters unmatched "
+          f"(caliper {mi['caliper']:.3f} on logit PS)")
 
     bfile = FIG.parent / "results_bootstrap.csv"
     if args.figs_only and bfile.exists():
@@ -198,6 +210,14 @@ if __name__ == "__main__":
         boot.to_csv(bfile, index=False)
 
     res = pd.DataFrame({"estimate": point, "ci_lo": boot.quantile(0.025), "ci_hi": boot.quantile(0.975)})
+    res["target"] = pd.Series(models.TARGET)
+    res["censoring"] = pd.Series(models.CENSORING)
+    # E-value: how strong an unmeasured confounder would have to be to explain the effect away
+    sd_y = d.loc[d.cens == 0, "wt82_71"].std()
+    ev = {k: models.evalue(r.estimate, r.ci_lo, r.ci_hi, sd_y) for k, r in res.iterrows()}
+    res["evalue"] = [ev[k][0] for k in res.index]
+    res["evalue_ci"] = [ev[k][1] for k in res.index]
+    res.loc["Unadjusted", ["evalue", "evalue_ci"]] = np.nan   # not a causal estimate
     res.round(3).to_csv(FIG.parent / "results.csv")
     print(res.round(2))
 

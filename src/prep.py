@@ -7,7 +7,9 @@ import numpy as np
 from pathlib import Path
 
 DATA = Path(__file__).resolve().parents[1] / "data"
-URL = "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv/causaldata/nhefs.csv"
+# pinned to a commit so a later change upstream cannot silently change the results
+URL = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
+       "cc03c29690889dbe83089f5206e2422db8c3f71f/csv/causaldata/nhefs.csv")
 
 # confounders, same set as ch.12 of the book
 CONFOUNDERS = ["sex", "race", "age", "education", "smokeintensity", "smokeyrs",
