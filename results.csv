@@ -1,7 +1,7 @@
-,estimate,ci_lo,ci_hi
-Unadjusted,2.541,1.506,3.478
-Outcome regression,3.463,2.465,4.413
-PS matching (ATT),3.328,1.732,4.712
-IP weighting,3.496,2.57,4.457
-G-formula,3.519,2.526,4.548
-AIPW (doubly robust),3.457,2.482,4.476
+,estimate,ci_lo,ci_hi,target,censoring,evalue,evalue_ci
+Unadjusted,2.541,1.506,3.478,crude,complete case,,
+Outcome regression,3.463,2.465,4.413,ATE,complete case,2.348,1.991
+PS matching (ATT),3.328,1.732,4.712,ATT,complete case,2.298,1.741
+IP weighting,3.496,2.57,4.457,ATE,IPCW,2.361,2.027
+G-formula,3.503,2.507,4.518,ATE,IPCW,2.363,2.006
+AIPW (doubly robust),3.465,2.51,4.438,ATE,IPCW,2.349,2.006
